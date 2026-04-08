@@ -11,8 +11,10 @@ export async function POST() {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
     }
 
-    // Ver si ya existe el profile
-    const { data: existing } = await supabase
+    const admin = createAdminClient()
+
+    // Usar admin para bypasear RLS en el SELECT
+    const { data: existing } = await admin
       .from('profiles')
       .select('id, rol')
       .eq('id', user.id)
@@ -20,8 +22,7 @@ export async function POST() {
 
     if (existing) return NextResponse.json({ rol: existing.rol })
 
-    // No existe → crear con service role (bypassa RLS)
-    const admin = createAdminClient()
+    // No existe → crear
     const meta = user.user_metadata ?? {}
     const rol = meta.rol || 'contador'
 
