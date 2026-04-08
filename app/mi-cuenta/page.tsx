@@ -10,7 +10,8 @@ export default async function MiCuentaPage() {
   const { data: profile } = await supabase
     .from('profiles').select('*').eq('id', user.id).single()
 
-  if (!profile || profile.rol !== 'cliente') redirect('/dashboard')
+  if (!profile) redirect('/login')
+  if (profile.rol !== 'cliente') redirect('/dashboard')
 
   const { data: transacciones } = await supabase
     .from('transacciones')

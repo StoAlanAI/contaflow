@@ -13,7 +13,8 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.rol !== 'contador') redirect('/mi-cuenta')
+  if (!profile) redirect('/login')
+  if (profile.rol !== 'contador') redirect('/mi-cuenta')
 
   const { data: clientes } = await supabase
     .from('profiles')

@@ -13,6 +13,7 @@ export default async function Home() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.rol === 'contador') redirect('/dashboard')
+  if (!profile) redirect('/login')
+  if (profile.rol === 'contador') redirect('/dashboard')
   redirect('/mi-cuenta')
 }
