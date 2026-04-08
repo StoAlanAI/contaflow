@@ -38,11 +38,27 @@ export default function LoginPage() {
       return
     }
 
-    const { data: profile } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
+
+    let { data: profile } = await supabase
       .from('profiles')
       .select('rol')
-      .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+      .eq('id', user.id)
       .single()
+
+    // Si no hay profile (cuenta creada antes de las tablas), lo creamos ahora
+    if (!profile) {
+      const meta = user.user_metadata ?? {}
+      await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email ?? email,
+        nombre: meta.nombre ?? email.split('@')[0],
+        rol: meta.rol ?? 'contador',
+      })
+      const { data: nuevo } = await supabase.from('profiles').select('rol').eq('id', user.id).single()
+      profile = nuevo
+    }
 
     router.push(profile?.rol === 'contador' ? '/dashboard' : '/mi-cuenta')
     router.refresh()

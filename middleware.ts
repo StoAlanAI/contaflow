@@ -45,11 +45,8 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile) {
-      // Sesión sin profile: cerrar sesión para que pueda re-registrarse
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+    // Sin profile: dejar que el login lo cree automáticamente
+    if (!profile) return supabaseResponse
 
     const dest = profile.rol === 'contador' ? '/dashboard' : '/mi-cuenta'
     return NextResponse.redirect(new URL(dest, request.url))
