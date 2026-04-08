@@ -41,6 +41,7 @@ export default function RegistroPage() {
       return
     }
 
+    await fetch('/api/ensure-profile', { method: 'POST' })
     router.push('/dashboard')
     router.refresh()
   }
