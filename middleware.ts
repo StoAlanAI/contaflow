@@ -31,10 +31,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/invitacion') ||
     pathname.startsWith('/auth')
 
+  // Sin sesión → login
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // Con sesión en páginas de auth → redirigir al panel
+  // Solo si hay profile válido, para no crear loop cuando profile es null
   if (user && (pathname === '/login' || pathname === '/registro')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -42,7 +45,13 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const dest = profile?.rol === 'contador' ? '/dashboard' : '/mi-cuenta'
+    if (!profile) {
+      // Sesión sin profile: cerrar sesión para que pueda re-registrarse
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    const dest = profile.rol === 'contador' ? '/dashboard' : '/mi-cuenta'
     return NextResponse.redirect(new URL(dest, request.url))
   }
 
