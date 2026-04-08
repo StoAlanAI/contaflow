@@ -40,9 +40,15 @@ export default function LoginPage() {
 
     // Asegurar que existe el profile (crea si falta, usa service role en servidor)
     const res = await fetch('/api/ensure-profile', { method: 'POST' })
-    const { rol } = await res.json()
+    const data = await res.json()
 
-    router.push(rol === 'contador' ? '/dashboard' : '/mi-cuenta')
+    if (!res.ok || !data.rol) {
+      setError('Error al cargar tu cuenta. Intentá de nuevo.')
+      setLoading(false)
+      return
+    }
+
+    router.push(data.rol === 'contador' ? '/dashboard' : '/mi-cuenta')
     router.refresh()
   }
 

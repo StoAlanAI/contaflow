@@ -3,32 +3,43 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    if (authError || !user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
 
-  // Ver si ya existe el profile
-  const { data: existing } = await supabase
-    .from('profiles')
-    .select('id, rol')
-    .eq('id', user.id)
-    .single()
+    // Ver si ya existe el profile
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id, rol')
+      .eq('id', user.id)
+      .single()
 
-  if (existing) return NextResponse.json({ rol: existing.rol })
+    if (existing) return NextResponse.json({ rol: existing.rol })
 
-  // No existe → crearlo con service role (bypassa RLS)
-  const admin = createAdminClient()
-  const meta = user.user_metadata ?? {}
+    // No existe → crear con service role (bypassa RLS)
+    const admin = createAdminClient()
+    const meta = user.user_metadata ?? {}
+    const rol = meta.rol || 'contador'
 
-  const { error } = await admin.from('profiles').insert({
-    id: user.id,
-    email: user.email!,
-    nombre: meta.nombre || user.email!.split('@')[0],
-    rol: meta.rol || 'contador',
-  })
+    const { error: insertError } = await admin.from('profiles').insert({
+      id: user.id,
+      email: user.email!,
+      nombre: meta.nombre || user.email!.split('@')[0],
+      rol,
+    })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (insertError) {
+      console.error('[ensure-profile] insert error:', insertError)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
 
-  return NextResponse.json({ rol: meta.rol || 'contador', created: true })
+    return NextResponse.json({ rol, created: true })
+  } catch (e: any) {
+    console.error('[ensure-profile] unexpected error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
